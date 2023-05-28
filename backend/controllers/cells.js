@@ -12,71 +12,51 @@ cellsRouter.get('/', async (req, res) => {
 
   const query = path ? { path: path } : {};
 
-  Cell.find(query)
-    .then((cells) => {
-      res.json(cells);
-    })
-    .catch((error) => {
-      console.error(error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    });
+  const cells = await Cell.find(query);
+  res.json(cells);
 });
 
 // Solun lisäys
-cellsRouter.post('/', (request, response, next) => {
+cellsRouter.post('/', async (request, response) => {
   const body = request.body;
 
   if (body.path) {
     body.path = body.path.replace(/\//g, '');
   }
 
-  Cell.find({})
-    .then((cells) => {
-      const nameIsTaken = (name, cells) => {
-        return cells.some(
-          (cell) => cell.name.toLowerCase() === name.toLowerCase()
-        );
-      };
+  cells = await Cell.find({});
+  const nameIsTaken = (name, cells) => {
+    return cells.some((cell) => cell.name.toLowerCase() === name.toLowerCase());
+  };
 
-      if (nameIsTaken(body.name, cells)) {
-        return next(new Error('Samanniminen solu on jo lisätty'));
-      }
+  if (nameIsTaken(body.name, cells)) {
+    return next(new Error('Samanniminen solu on jo lisätty'));
+  }
 
-      const cell = new Cell({
-        name: body.name,
-        path: body.path,
-      });
+  const cell = await new Cell({
+    name: body.name,
+    path: body.path,
+  });
 
-      cell
-        .save()
-        .then((savedCell) => {
-          response.status(201).json(savedCell);
-        })
-        .catch((error) => next(error));
-    })
-    .catch((error) => next(error));
+  cell.save().then((savedCell) => {
+    response.status(201).json(savedCell);
+  });
 });
 
 // Solun haku
-cellsRouter.get('/:id', (request, response, next) => {
-  Cell.findById(request.params.id)
-    .then((cell) => {
-      if (cell) {
-        response.json(cell);
-      } else {
-        response.status(404).end();
-      }
-    })
-    .catch((error) => next(error));
+cellsRouter.get('/:id', async (request, response) => {
+  oneCell = await Cell.findById(request.params.id);
+  if (cell) {
+    response.json(cell);
+  } else {
+    response.status(404).end();
+  }
 });
 
 // Solun poisto
-cellsRouter.delete('/:id', (request, response, next) => {
-  Cell.findByIdAndRemove(request.params.id)
-    .then(() => {
-      response.status(204).end();
-    })
-    .catch((error) => next(error));
+cellsRouter.delete('/:id', async (request, response) => {
+  foundId = await Cell.findByIdAndRemove(request.params.id);
+  response.status(204).end();
 });
 
 module.exports = cellsRouter;
