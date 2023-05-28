@@ -46,8 +46,8 @@ cellsRouter.post('/', async (request, response) => {
 // Solun haku
 cellsRouter.get('/:id', async (request, response) => {
   oneCell = await Cell.findById(request.params.id);
-  if (cell) {
-    response.json(cell);
+  if (oneCell) {
+    response.json(oneCell);
   } else {
     response.status(404).end();
   }
