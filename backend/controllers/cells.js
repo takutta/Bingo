@@ -50,7 +50,7 @@ cellsRouter.post('/', (request, response, next) => {
       cell
         .save()
         .then((savedCell) => {
-          response.json(savedCell);
+          response.status(201).json(savedCell);
         })
         .catch((error) => next(error));
     })
