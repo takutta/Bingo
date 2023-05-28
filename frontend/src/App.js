@@ -1,101 +1,199 @@
-import { useState, useEffect } from "react";
-import Filter from "./Filter";
-import PersonForm from "./PersonForm";
-import Persons from "./Persons";
-import personService from "./services/persons";
-import axios from "axios";
+import React, { useState, useEffect } from 'react';
+import CellForm from './CellForm';
+import Cells from './Cells';
+import BingoSheet from './BingoSheet';
+import cellService from './services/cells';
+import Notification from './Notification';
+import Error from './Error';
+import Header from './Header';
+import BingoSize from './BingoSize';
+import UusiArvonta from './UusiArvonta';
+import Tulostus from './Tulostus';
+import TextZoom from './TextZoom';
 
-const App = () => {
-  const [persons, setPersons] = useState([]);
-  const [newName, setNewName] = useState("");
-  const [newNumber, setNewNumber] = useState("");
-  const [filter, setFilter] = useState("");
-  const [filteredPersons, setFilteredPersons] = useState(persons);
+function App() {
+  const [cells, setCells] = useState([]);
+  const [newName, setNewName] = useState('');
   const [notificationMessage, setNotificationMessage] = useState();
   const [errorMessage, setErrorMessage] = useState();
+  const [newPath, setNewPath] = useState(window.location.pathname);
+  const [bingoSize, setBingoSize] = useState(5);
+  const [bingoCells, setBingoCells] = useState([]);
+  const [arvonta, setArvonta] = useState(false);
+  const [fontSize, setFontSize] = useState(18); // Alustetaan fontin koko
+
+  const bingoSizeList = [
+    { size: 3, name: '3x3', tooltip: 'Vaaka A4, 4 lappua' },
+    { size: 4, name: '4x4', tooltip: 'Vaaka A4, 4 lappua' },
+    { size: 5, name: '5x5', tooltip: 'Pysty A4, 2 lappua' },
+    { size: 6, name: '6x6', tooltip: 'Pysty A4, 2 lappua' },
+  ];
 
   useEffect(() => {
-    personService.getAll().then((initialPersons) => {
-      setPersons(initialPersons);
-      setFilteredPersons(initialPersons);
+    if (arvonta) {
+      const cellsMod = cells.slice(); // Alusta cellsMod kopiona cells-taulukosta
+
+      for (let i = cellsMod.length; i < bingoSize * bingoSize; i += 1) {
+        const characters = '0123456789abcdef';
+        let randomId = '';
+
+        for (let j = 0; j < 24; j += 1) {
+          const randomIndex = Math.floor(Math.random() * characters.length);
+          randomId += characters[randomIndex];
+        }
+
+        cellsMod.push({ name: '', id: randomId });
+      }
+
+      const p1 = cellsMod
+        .slice()
+        .sort(() => Math.random() - 0.5)
+        .map((item) => ({ ...item, player: 1 }));
+      p1.splice(bingoSize * bingoSize);
+
+      const p2 = cellsMod
+        .slice()
+        .sort(() => Math.random() - 0.5)
+        .map((item) => ({ ...item, player: 2 }));
+      p2.splice(bingoSize * bingoSize);
+
+      const p3 = cellsMod
+        .slice()
+        .sort(() => Math.random() - 0.5)
+        .map((item) => ({ ...item, player: 3 }));
+      p3.splice(bingoSize * bingoSize);
+
+      const p4 = cellsMod
+        .slice()
+        .sort(() => Math.random() - 0.5)
+        .map((item) => ({ ...item, player: 4 }));
+      p4.splice(bingoSize * bingoSize);
+
+      const bingoGrid = [];
+      let firstItem;
+
+      // 3 & 4 bingot
+
+      for (let i = 0; i < bingoSize * 2; i += 1) {
+        // bingoruudukon verran
+        if (bingoSize < 5) {
+          for (let j = 0; j < bingoSize * 2; j += 1) {
+            // p1
+            if (i < bingoSize && j < bingoSize) {
+              firstItem = p1.shift();
+            } else if (bingoSize < 5 && j < bingoSize) {
+              firstItem = p2.shift();
+            } else if (bingoSize < 5 && i < bingoSize) {
+              firstItem = p3.shift();
+            } else {
+              firstItem = p4.shift();
+            }
+
+            if (bingoSize >= 5 && j < bingoSize) {
+              firstItem = p1.shift();
+            } else if (bingoSize >= 5) {
+              firstItem = p2.shift();
+            }
+
+            bingoGrid.push(firstItem);
+          }
+        } else {
+          for (let j = 0; j < bingoSize; j += 1) {
+            if (i < bingoSize) {
+              firstItem = p1.shift();
+            } else {
+              firstItem = p2.shift();
+            }
+
+            bingoGrid.push(firstItem);
+          }
+        }
+      }
+
+      // 5 & 6 bingot
+
+      setBingoCells(bingoGrid);
+      setArvonta(false);
+    }
+  }, [arvonta, bingoSize, cells]);
+
+  const handleArvonta = () => {
+    setArvonta(true);
+  };
+
+  const handleTulostus = () => {
+    window.print();
+  };
+
+  useEffect(() => {
+    cellService.getByPath(newPath).then((initialCells) => {
+      setCells(initialCells);
+      setArvonta(true);
+      // setBingoCells(initialCells); // Asetetaan bingoruutujen solut aluksi
     });
-  }, []);
+  }, [newPath]);
 
   const addName = (event) => {
     event.preventDefault();
-    const duplicate = persons.find((person) => person.name == newName);
+    setNewPath(window.location.pathname);
+    const duplicate = cells.find((cell) => cell.name === newName);
     if (duplicate) {
       if (
         window.confirm(
           `${duplicate.name} is already added to phonebook, replace the old number with a new one?`
         )
       ) {
-        const personObject = {
+        const cellObject = {
           name: duplicate.name,
-          number: newNumber,
           id: duplicate.id,
         };
 
-        personService
-          .update(duplicate.id, personObject)
-          .then((returnedPerson) => {
-            setPersons(
-              persons.map((person) =>
-                person.id !== duplicate.id ? person : returnedPerson
+        cellService
+          .update(duplicate.id, cellObject)
+          .then((returnedCell) => {
+            setCells(
+              cells.map((cell) =>
+                cell.id !== duplicate.id ? cell : returnedCell
               )
             );
-            setFilteredPersons(
-              persons.map((person) =>
-                person.id !== duplicate.id ? person : returnedPerson
-              )
-            );
-            setFilter("");
-            setNewName("");
-            setNewNumber("");
+
             setNotificationMessage(
-              `Person's, ${duplicate.name}, number is changed`
+              `Cell's, ${duplicate.name}, number is changed`
             );
+            setArvonta(true);
             setTimeout(() => {
               setNotificationMessage(undefined);
             }, 2000);
           })
           .catch((error) => {
             console.log(error);
-            setErrorMessage(
-              `Information of ${duplicate.name} has already been removed from server`
-            );
-
+            setErrorMessage(`Ruutu "${duplicate.name}" on jo poistettu.`);
             setTimeout(() => {
               setErrorMessage(undefined);
             }, 2000);
           });
       }
     } else {
-      const maxId = persons.reduce((max, person) => {
-        return person.id > max ? person.id : max;
-      }, 0);
-      const personObject = {
-        name: newName,
-        number: newNumber,
-        id: maxId + 1,
+      const capitalizedNewName =
+        newName.charAt(0).toUpperCase() + newName.slice(1);
+      const cellObject = {
+        name: capitalizedNewName,
+        path: newPath,
       };
 
-      personService
-        .create(personObject)
-        .then((returnedPerson) => {
-          setPersons(persons.concat(returnedPerson));
-          setFilteredPersons(persons.concat(personObject));
-          setFilter("");
-          setNewName("");
-          setNewNumber("");
-          setNotificationMessage(`Person ${returnedPerson.name} was added`);
+      cellService
+        .create(cellObject)
+        .then((returnedCell) => {
+          setCells(cells.concat(returnedCell));
+          setNewName('');
+          setNotificationMessage(`Ruutu "${returnedCell.name}" lisättiin`);
           setTimeout(() => {
             setNotificationMessage(undefined);
           }, 2000);
         })
         .catch((error) => {
           console.log(error);
-          setErrorMessage(`Validation error!`);
+          setErrorMessage('Virheellinen ruutu. Yritä uudelleen.');
 
           setTimeout(() => {
             setErrorMessage(undefined);
@@ -104,72 +202,80 @@ const App = () => {
     }
   };
 
-  const deletePerson = (id) => {
-    const name = persons.find((person) => (person.id = id)).name;
-    if (window.confirm(`Delete ${name}?`)) {
-      personService.deleteOne(id).then((stayedPersons) => {
-        setPersons(stayedPersons);
-        setFilter("");
-        setFilteredPersons(stayedPersons);
+  const deleteCell = (id) => {
+    const cellToDelete = cells.find((cell) => cell.id === id);
+    if (window.confirm(`Delete ${cellToDelete.name}?`)) {
+      cellService.deleteOne(id, newPath).then(() => {
+        // Päivitä cells-tila poistamalla poistettu solu
+        setCells(cells.filter((cell) => cell.id !== id));
+        setNotificationMessage(`Ruutu "${cellToDelete.name}" poistettiin`);
+        setTimeout(() => {
+          setNotificationMessage(undefined);
+        }, 2000);
       });
-      setNotificationMessage(`Person ${name} was deleted`);
-      setTimeout(() => {
-        setNotificationMessage(undefined);
-      }, 2000);
     }
   };
 
   const handleNameChange = (event) => setNewName(event.target.value);
-  const handleNumberChange = (event) => setNewNumber(event.target.value);
-  const handleDeletePerson = (event) => deletePerson(event.target.value);
-  const handleFilter = (event) => {
-    const filterValue = event.target.value.toLowerCase();
-    setFilter(filterValue);
-    const filtered = persons.filter((person) =>
-      person.name.toLowerCase().includes(filterValue)
-    );
-    setFilteredPersons(filtered);
+  const handleDeleteCell = (event) => {
+    deleteCell(event.target.value);
   };
 
-  const Notification = ({ message }) => {
-    if (message === undefined) {
-      return null;
-    }
-    return <div className="notification success">{message}</div>;
+  const handleBingoSizeChange = (event) => {
+    setBingoSize(Number(event.target.value));
+    handleArvonta(); // Kutsutaan handleArvonta aina kun bingokokoa muutetaan
   };
 
-  const Error = ({ message }) => {
-    if (message === undefined) {
-      return null;
-    }
-    return <div className="notification error">{message}</div>;
+  const increaseFontSize = () => {
+    setFontSize((prevSize) => prevSize + 1);
+  };
+
+  const decreaseFontSize = () => {
+    setFontSize((prevSize) => prevSize - 1);
   };
 
   return (
-    <div>
-      <h2>Phonebook</h2>
-      <Notification message={notificationMessage} />
-      <Error message={errorMessage} />
-      <Filter filter={filter} handleFilter={handleFilter} />
+    <div className="flex mb-5">
+      <div className="container max-w-6xl px-2">
+        <div className="ml-4 noPrint">
+          <Header />
 
-      <h3>Add a new</h3>
+          <Cells cells={cells} handleDeleteCell={handleDeleteCell} />
 
-      <PersonForm
-        addName={addName}
-        newName={newName}
-        handleNameChange={handleNameChange}
-        newNumber={newNumber}
-        handleNumberChange={handleNumberChange}
-      />
+          <div className="block clear-both mb-5" />
+          <Notification message={notificationMessage} />
+          <Error message={errorMessage} />
+          <CellForm
+            addName={addName}
+            newName={newName}
+            handleNameChange={handleNameChange}
+          />
 
-      <h2>Numbers</h2>
+          <UusiArvonta handleArvonta={handleArvonta} />
 
-      <Persons
-        persons={filteredPersons}
-        handleDeletePerson={handleDeletePerson}
-      />
+          <TextZoom
+            decreaseFontSize={decreaseFontSize}
+            increaseFontSize={increaseFontSize}
+          />
+
+          <BingoSize
+            bingoSizeList={bingoSizeList}
+            bingoSize={bingoSize}
+            handleBingoSizeChange={handleBingoSizeChange}
+          />
+          <Tulostus handleTulostus={handleTulostus} />
+
+          <div className="block clear-both mb-1" />
+        </div>
+
+        <BingoSheet
+          cells={bingoCells}
+          bingoSize={bingoSize}
+          fontSize={fontSize}
+        />
+      </div>
     </div>
   );
-};
+}
 
 export default App;

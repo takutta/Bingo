@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 .notification {
   padding: 10px;
   font-weight: bold;
@@ -12,4 +16,29 @@
 
 .error {
   background: #ca3e3e;
+}
+
+.bingo3 {
+  width:180px;
+  height:126px;
+  font-size:22px;
+}
+
+.bingo4 {
+  width:135px;
+  height:95px;
+  font-size:17px;
+}
+
+
+.bingo5 {
+  width:151px;
+  height:108px;
+  font-size:18px;
+}
+
+.bingo6 {
+  width: 125px;
+  height:90px;
+  font-size:16px
 }

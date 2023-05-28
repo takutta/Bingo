@@ -1,0 +1,7 @@
+POST http://localhost:3001/api/cells
+Content-Type: application/json
+
+{
+"name": "aaaaaaaaahee",
+"path": "poopsss"
+} 

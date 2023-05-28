@@ -1,133 +1,137 @@
-require('dotenv').config()
-const express = require('express')
-const app = express()
-const morgan = require('morgan')
-const cors = require('cors')
+require('dotenv').config();
+const express = require('express');
+const app = express();
+const morgan = require('morgan');
+const cors = require('cors');
+const path = require('path');
 
-const Person = require('./models/person')
-
-app.use(express.static('build'))
-app.use(express.json())
-
-app.use(cors())
-
-morgan.token('body', (req) => JSON.stringify(req.body))
-app.use(
-  morgan(':method :url :status :res[content-length] - :response-time ms :body')
-)
+const Cell = require('./models/cell');
 
 app.get('/', (req, res) => {
-  res.send('<h1>Hello World!</h1>')
-})
+  res.sendFile(path.join(__dirname, 'info', 'index.html'));
+});
 
-app.get('/api/persons', (req, res) => {
-  Person.find({}).then((persons) => {
-    res.json(persons)
-  })
-})
+app.use(express.static(path.join(__dirname, 'build')));
 
-app.get('/info', (req, res) => {
-  Person.countDocuments({}).then((count) => {
-    res.send(`<p>Phonebook has info for ${count} people</p>
-             <p>${new Date()}</p>`)
-  })
-})
+app.use(express.json());
 
-app.post('/api/persons', (request, response, next) => {
-  const body = request.body
+app.use(cors());
 
-  if (!body.name || !body.number) {
-    return next(new Error('name or number is missing'))
+// Lokitus
+morgan.token('body', (req) => JSON.stringify(req.body));
+app.use(
+  morgan(':method :url :status :res[content-length] - :response-time ms :body')
+);
+
+// Kaikki solut
+app.get('/api/cells', (req, res) => {
+  let path = req.query.path;
+
+  if (path) {
+    path = path.replace(/\//g, '');
   }
 
-  Person.find({}).then((persons) => {
-    const nameIsTaken = (name, persons) => {
-      return persons.some(
-        (person) => person.name.toLowerCase() === name.toLowerCase()
-      )
-    }
+  const query = path ? { path: path } : {};
 
-    if (nameIsTaken(body.name, persons)) {
-      return next(new Error('name must be unique'))
-    }
-
-    const person = new Person({
-      name: body.name,
-      number: body.number,
+  Cell.find(query)
+    .then((cells) => {
+      res.json(cells);
     })
+    .catch((error) => {
+      console.error(error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    });
+});
 
-    person
-      .save()
-      .then((savedPerson) => {
-        response.json(savedPerson)
-      })
-      .catch((error) => next(error))
-  })
-})
+// Solun lisäys
+app.post('/api/cells', (request, response, next) => {
+  const body = request.body;
 
-app.get('/api/persons/:id', (request, response, next) => {
-  Person.findById(request.params.id)
-    .then((person) => {
-      if (person) {
-        response.json(person)
+  if (body.path) {
+    body.path = body.path.replace(/\//g, '');
+  }
+
+  Cell.find({})
+    .then((cells) => {
+      const nameIsTaken = (name, cells) => {
+        return cells.some(
+          (cell) => cell.name.toLowerCase() === name.toLowerCase()
+        );
+      };
+
+      if (nameIsTaken(body.name, cells)) {
+        return next(new Error('Samanniminen solu on jo lisätty'));
+      }
+
+      const cell = new Cell({
+        name: body.name,
+        path: body.path,
+      });
+
+      cell
+        .save()
+        .then((savedCell) => {
+          response.json(savedCell);
+        })
+        .catch((error) => next(error));
+    })
+    .catch((error) => next(error));
+});
+
+// Solun haku
+app.get('/api/cells/:id', (request, response, next) => {
+  Cell.findById(request.params.id)
+    .then((cell) => {
+      if (cell) {
+        response.json(cell);
       } else {
-        response.status(404).end()
+        response.status(404).end();
       }
     })
-    .catch((error) => next(error))
-})
+    .catch((error) => next(error));
+});
 
-app.put('/api/persons/:id', (request, response, next) => {
-  const body = request.body
-
-  const person = {
-    name: body.name,
-    number: body.number,
-  }
-
-  Person.findByIdAndUpdate(request.params.id, person, { new: true })
-    .then((updatedPerson) => {
-      response.json(updatedPerson)
-    })
-    .catch((error) => next(error))
-})
-
-app.delete('/api/persons/:id', (request, response, next) => {
-  Person.findByIdAndRemove(request.params.id)
+// Solun poisto
+app.delete('/api/cells/:id', (request, response, next) => {
+  Cell.findByIdAndRemove(request.params.id)
     .then(() => {
-      response.status(204).end()
+      response.status(204).end();
     })
-    .catch((error) => next(error))
-})
+    .catch((error) => next(error));
+});
 
-const PORT = process.env.PORT
+const PORT = process.env.PORT;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
-})
+  console.log(`Server running on port ${PORT}`);
+});
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname + '/build/index.html'));
+});
 
 const unknownEndpoint = (request, response, next) => {
-  return next(new Error('unknown endpoint'))
-}
+  return next(new Error('unknown endpoint'));
+};
 
-// olemattomien osoitteiden käsittely
-app.use(unknownEndpoint)
+// Olemattomien osoitteiden käsittely
+app.use(unknownEndpoint);
 
+// Virheiden käsittely
 const errorHandler = (error, request, response, next) => {
-  console.error(error.message)
+  console.error(error.message);
   if (error.name === 'CastError') {
-    return response.status(400).send({ error: 'malformatted id' })
+    return response.status(400).send({ error: 'malformatted id' });
   }
 
   if (error.name === 'ValidationError') {
-    return response.status(400).json({ error: error.message })
+    return response.status(400).json({ error: error.message });
   }
 
   if (error.message === 'unknown endpoint') {
-    return response.status(500).json({ error: error.message })
+    return response.status(500).json({ error: error.message });
   }
 
-  next(error)
-}
+  next(error);
+};
 
-// tämä tulee kaikkien muiden middlewarejen rekisteröinnin jälkeen!
-app.use(errorHandler)
+app.use(errorHandler);
