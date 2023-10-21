@@ -139,6 +139,7 @@ function App() {
     const duplicate = cells.find((cell) => cell.name === newName);
     if (duplicate) {
       if (
+        // eslint-disable-next-lin
         window.confirm(
           `${duplicate.name} is already added to phonebook, replace the old number with a new one?`
         )
@@ -165,8 +166,8 @@ function App() {
               setNotificationMessage(undefined);
             }, 2000);
           })
-          .catch((error) => {
-            console.log(error);
+
+          .catch(() => {
             setErrorMessage(`Ruutu "${duplicate.name}" on jo poistettu.`);
             setTimeout(() => {
               setErrorMessage(undefined);
@@ -191,8 +192,7 @@ function App() {
             setNotificationMessage(undefined);
           }, 2000);
         })
-        .catch((error) => {
-          console.log(error);
+        .catch(() => {
           setErrorMessage('Virheellinen ruutu. Yritä uudelleen.');
 
           setTimeout(() => {
@@ -204,9 +204,9 @@ function App() {
 
   const deleteCell = (id) => {
     const cellToDelete = cells.find((cell) => cell.id === id);
+    // eslint-disable-next-lin
     if (window.confirm(`Delete ${cellToDelete.name}?`)) {
       cellService.deleteOne(id, newPath).then(() => {
-        // Päivitä cells-tila poistamalla poistettu solu
         setCells(cells.filter((cell) => cell.id !== id));
         setNotificationMessage(`Ruutu "${cellToDelete.name}" poistettiin`);
         setTimeout(() => {

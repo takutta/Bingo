@@ -11,8 +11,7 @@ const getByPath = (path) => {
   return request
     .then((response) => response.data)
     .catch((error) => {
-      console.error('Error in getByPath:', error);
-      throw error; // Heitä virhe eteenpäin, jotta sitä voidaan käsitellä kutsuvassa komponentissa
+      throw error;
     });
 };
 

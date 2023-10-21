@@ -5,7 +5,6 @@ function BingoSheet({ cells, bingoSize, fontSize }) {
   if (bingoSize === 3 || bingoSize === 4) {
     landscape = 'landscape';
   }
-  console.log(cells);
   return (
     <div className={`A4 ${landscape}`}>
       <section className="sheet padding-5mm">
