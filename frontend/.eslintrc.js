@@ -9,11 +9,10 @@ module.exports = {
     ecmaVersion: 'latest',
     sourceType: 'module',
   },
-  plugins: ['react', 'prettier'],
+  plugins: ['react'],
   rules: {
     'react/jsx-filename-extension': [1, { extensions: ['.js', '.jsx'] }],
     'react/prop-types': 0,
-    'prettier/prettier': 'error',
     'no-alert': 'off',
     'import/no-extraneous-dependencies': [
       'error',
